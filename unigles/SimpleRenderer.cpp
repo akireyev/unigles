@@ -17,272 +17,252 @@ using namespace unigles;
 
 #define STRING(s) #s
 
-GLuint CompileShader(GLenum type, const std::string &source)
-{
-    GLuint shader = glCreateShader(type);
+GLuint CompileShader(GLenum type, const std::string &source) {
+	GLuint shader = glCreateShader(type);
 
-    const char *sourceArray[1] = { source.c_str() };
-    glShaderSource(shader, 1, sourceArray, NULL);
-    glCompileShader(shader);
+	const char *sourceArray[1] = { source.c_str() };
+	glShaderSource(shader, 1, sourceArray, NULL);
+	glCompileShader(shader);
 
-    GLint compileResult;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &compileResult);
+	GLint compileResult;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &compileResult);
 
-    if (compileResult == 0)
-    {
-        GLint infoLogLength;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (compileResult == 0) {
+		GLint infoLogLength;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
 
-        std::vector<GLchar> infoLog(infoLogLength);
-        glGetShaderInfoLog(shader, (GLsizei)infoLog.size(), NULL, infoLog.data());
+		std::vector<GLchar> infoLog(infoLogLength);
+		glGetShaderInfoLog(shader, (GLsizei)infoLog.size(), NULL, infoLog.data());
 
-        std::wstring errorMessage = std::wstring(L"Shader compilation failed: ");
-        errorMessage += std::wstring(infoLog.begin(), infoLog.end()); 
+		std::wstring errorMessage = std::wstring(L"Shader compilation failed: ");
+		errorMessage += std::wstring(infoLog.begin(), infoLog.end());
 
-        throw Exception::CreateException(E_FAIL, ref new Platform::String(errorMessage.c_str()));
-    }
+		throw Exception::CreateException(E_FAIL, ref new Platform::String(errorMessage.c_str()));
+	}
 
-    return shader;
+	return shader;
 }
 
-GLuint CompileProgram(const std::string &vsSource, const std::string &fsSource)
-{
-    GLuint program = glCreateProgram();
+GLuint CompileProgram(const std::string &vsSource, const std::string &fsSource) {
+	GLuint program = glCreateProgram();
 
-    if (program == 0)
-    {
-        throw Exception::CreateException(E_FAIL, L"Program creation failed");
-    }
+	if (program == 0) {
+		throw Exception::CreateException(E_FAIL, L"Program creation failed");
+	}
 
-    GLuint vs = CompileShader(GL_VERTEX_SHADER, vsSource);
-    GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fsSource);
+	GLuint vs = CompileShader(GL_VERTEX_SHADER, vsSource);
+	GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fsSource);
 
-    if (vs == 0 || fs == 0)
-    {
-        glDeleteShader(fs);
-        glDeleteShader(vs);
-        glDeleteProgram(program);
-        return 0;
-    }
+	if (vs == 0 || fs == 0) {
+		glDeleteShader(fs);
+		glDeleteShader(vs);
+		glDeleteProgram(program);
+		return 0;
+	}
 
-    glAttachShader(program, vs);
-    glDeleteShader(vs);
+	glAttachShader(program, vs);
+	glDeleteShader(vs);
 
-    glAttachShader(program, fs);
-    glDeleteShader(fs);
+	glAttachShader(program, fs);
+	glDeleteShader(fs);
 
-    glLinkProgram(program);
+	glLinkProgram(program);
 
-    GLint linkStatus;
-    glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+	GLint linkStatus;
+	glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
 
-    if (linkStatus == 0)
-    {
-        GLint infoLogLength;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
+	if (linkStatus == 0) {
+		GLint infoLogLength;
+		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
 
-        std::vector<GLchar> infoLog(infoLogLength);
-        glGetProgramInfoLog(program, (GLsizei)infoLog.size(), NULL, infoLog.data());
+		std::vector<GLchar> infoLog(infoLogLength);
+		glGetProgramInfoLog(program, (GLsizei)infoLog.size(), NULL, infoLog.data());
 
-        std::wstring errorMessage = std::wstring(L"Program link failed: ");
-        errorMessage += std::wstring(infoLog.begin(), infoLog.end()); 
+		std::wstring errorMessage = std::wstring(L"Program link failed: ");
+		errorMessage += std::wstring(infoLog.begin(), infoLog.end());
 
-        throw Exception::CreateException(E_FAIL, ref new Platform::String(errorMessage.c_str()));
-    }
+		throw Exception::CreateException(E_FAIL, ref new Platform::String(errorMessage.c_str()));
+	}
 
-    return program;
+	return program;
 }
 
 SimpleRenderer::SimpleRenderer() :
-    mWindowWidth(0),
-    mWindowHeight(0),
-    mDrawCount(0)
-{
-    // Vertex Shader source
-    const std::string vs = STRING
-    (
-        uniform mat4 uModelMatrix;
-        uniform mat4 uViewMatrix;
-        uniform mat4 uProjMatrix;
-        attribute vec4 aPosition;
-        attribute vec4 aColor;
-        varying vec4 vColor;
-		varying vec2 vTexCoord;
-        void main()
-        {
-            gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * aPosition;
-            vColor = aColor;
-			if (aPosition.z > 0.99) {
-				vTexCoord = (vec2(1.0, 1.0) + aPosition.xy) * 0.5;
-			}
-			else {
-				vTexCoord = vec2(-100.0, -100.0);
-			}
-        }
-    );
+	mWindowWidth(0),
+	mWindowHeight(0),
+	mDrawCount(0) {
+	// Vertex Shader source
+	const std::string vs = STRING
+	(
+		uniform mat4 uModelMatrix;
+	uniform mat4 uViewMatrix;
+	uniform mat4 uProjMatrix;
+	attribute vec4 aPosition;
+	attribute vec4 aColor;
+	varying vec4 vColor;
+	varying vec2 vTexCoord;
+	void main() {
+		gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * aPosition;
+		vColor = aColor;
+		if (aPosition.z > 0.99) {
+			vTexCoord = (vec2(1.0, 1.0) + aPosition.xy) * 0.5;
+		} else {
+			vTexCoord = vec2(-100.0, -100.0);
+		}
+	}
+	);
 
-    // Fragment Shader source
-    const std::string fs = STRING
-    (
-        precision mediump float;
-	    uniform sampler2D uCameraTexture;
-        varying vec4 vColor;
-		varying vec2 vTexCoord;
-        void main()
-        {
-			if (vTexCoord.x < 0.0) {
-				gl_FragColor = vColor;
-			}
-			else {
-				gl_FragColor = texture2D(uCameraTexture, vTexCoord);
-			}
-        }
-    );
+	// Fragment Shader source
+	const std::string fs = STRING
+	(
+		precision mediump float;
+	uniform sampler2D uCameraTexture;
+	varying vec4 vColor;
+	varying vec2 vTexCoord;
+	void main() {
+		if (vTexCoord.x < 0.0) {
+			gl_FragColor = vColor;
+		} else {
+			gl_FragColor = texture2D(uCameraTexture, vTexCoord);
+		}
+	}
+	);
 
-    // Set up the shader and its uniform/attribute locations.
-    mProgram = CompileProgram(vs, fs);
-    mPositionAttribLocation = glGetAttribLocation(mProgram, "aPosition");
-    mColorAttribLocation = glGetAttribLocation(mProgram, "aColor");
-    mModelUniformLocation = glGetUniformLocation(mProgram, "uModelMatrix");
-    mViewUniformLocation = glGetUniformLocation(mProgram, "uViewMatrix");
-    mProjUniformLocation = glGetUniformLocation(mProgram, "uProjMatrix");
+	// Set up the shader and its uniform/attribute locations.
+	mProgram = CompileProgram(vs, fs);
+	mPositionAttribLocation = glGetAttribLocation(mProgram, "aPosition");
+	mColorAttribLocation = glGetAttribLocation(mProgram, "aColor");
+	mModelUniformLocation = glGetUniformLocation(mProgram, "uModelMatrix");
+	mViewUniformLocation = glGetUniformLocation(mProgram, "uViewMatrix");
+	mProjUniformLocation = glGetUniformLocation(mProgram, "uProjMatrix");
 	mTextureLocation = glGetUniformLocation(mProgram, "uCameraTexture");
-    
-    glGenTextures(1, &mTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    // Then set up the cube geometry.
-    GLfloat vertexPositions[] =
-    {
-        -1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f,  1.0f,
-        -1.0f,  1.0f, -1.0f,
-        -1.0f,  1.0f,  1.0f,
-         1.0f, -1.0f, -1.0f,
-         1.0f, -1.0f,  1.0f,
-         1.0f,  1.0f, -1.0f,
-         1.0f,  1.0f,  1.0f,
-    };
+	glGenTextures(1, &mTexture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glGenBuffers(1, &mVertexPositionBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, mVertexPositionBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
+	// Then set up the cube geometry.
+	GLfloat vertexPositions[] =
+	{
+		-1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f,  1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f,  1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f,  1.0f,
+	};
 
-    GLfloat vertexColors[] =
-    {
-        0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 1.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 1.0f,
-        1.0f, 1.0f, 0.0f,
-        1.0f, 1.0f, 1.0f,
-    };
+	glGenBuffers(1, &mVertexPositionBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, mVertexPositionBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
 
-    glGenBuffers(1, &mVertexColorBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, mVertexColorBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexColors), vertexColors, GL_STATIC_DRAW);
+	GLfloat vertexColors[] =
+	{
+		0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f,
+		0.0f, 1.0f, 0.0f,
+		0.0f, 1.0f, 1.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 1.0f,
+		1.0f, 1.0f, 0.0f,
+		1.0f, 1.0f, 1.0f,
+	};
 
-    short indices[] =
-    {
-        0, 1, 2, // -x
-        1, 3, 2,
+	glGenBuffers(1, &mVertexColorBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, mVertexColorBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexColors), vertexColors, GL_STATIC_DRAW);
 
-        4, 6, 5, // +x
-        5, 6, 7,
+	short indices[] =
+	{
+		0, 1, 2, // -x
+		1, 3, 2,
 
-        0, 5, 1, // -y
-        0, 4, 5,
+		4, 6, 5, // +x
+		5, 6, 7,
 
-        2, 7, 6, // +y
-        2, 3, 7,
-              
-        0, 6, 4, // -z
-        0, 2, 6,
-              
-        1, 7, 3, // +z
-        1, 5, 7,
-    };
+		0, 5, 1, // -y
+		0, 4, 5,
 
-    glGenBuffers(1, &mIndexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+		2, 7, 6, // +y
+		2, 3, 7,
+
+		0, 6, 4, // -z
+		0, 2, 6,
+
+		1, 7, 3, // +z
+		1, 5, 7,
+	};
+
+	glGenBuffers(1, &mIndexBuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 }
 
-SimpleRenderer::~SimpleRenderer()
-{
-    if (mProgram != 0)
-    {
-        glDeleteProgram(mProgram);
-        mProgram = 0;
-    }
+SimpleRenderer::~SimpleRenderer() {
+	if (mProgram != 0) {
+		glDeleteProgram(mProgram);
+		mProgram = 0;
+	}
 
-    if (mVertexPositionBuffer != 0)
-    {
-        glDeleteBuffers(1, &mVertexPositionBuffer);
-        mVertexPositionBuffer = 0;
-    }
+	if (mVertexPositionBuffer != 0) {
+		glDeleteBuffers(1, &mVertexPositionBuffer);
+		mVertexPositionBuffer = 0;
+	}
 
-    if (mVertexColorBuffer != 0)
-    {
-        glDeleteBuffers(1, &mVertexColorBuffer);
-        mVertexColorBuffer = 0;
-    }
+	if (mVertexColorBuffer != 0) {
+		glDeleteBuffers(1, &mVertexColorBuffer);
+		mVertexColorBuffer = 0;
+	}
 
-    if (mIndexBuffer != 0)
-    {
-        glDeleteBuffers(1, &mIndexBuffer);
-        mIndexBuffer = 0;
-    }
+	if (mIndexBuffer != 0) {
+		glDeleteBuffers(1, &mIndexBuffer);
+		mIndexBuffer = 0;
+	}
 }
 
-void SimpleRenderer::Draw()
-{
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+void SimpleRenderer::Draw() {
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (mProgram == 0) return;
+	if (mProgram == 0) return;
 
-    glUseProgram(mProgram);
+	glUseProgram(mProgram);
 
-    glBindBuffer(GL_ARRAY_BUFFER, mVertexPositionBuffer);
-    glEnableVertexAttribArray(mPositionAttribLocation);
-    glVertexAttribPointer(mPositionAttribLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, mVertexPositionBuffer);
+	glEnableVertexAttribArray(mPositionAttribLocation);
+	glVertexAttribPointer(mPositionAttribLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, mVertexColorBuffer);
-    glEnableVertexAttribArray(mColorAttribLocation);
-    glVertexAttribPointer(mColorAttribLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, mVertexColorBuffer);
+	glEnableVertexAttribArray(mColorAttribLocation);
+	glVertexAttribPointer(mColorAttribLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-    MathHelper::Matrix4 modelMatrix = MathHelper::SimpleModelMatrix((float)mDrawCount / 50.0f);
-    glUniformMatrix4fv(mModelUniformLocation, 1, GL_FALSE, &(modelMatrix.m[0][0]));
+	MathHelper::Matrix4 modelMatrix = MathHelper::SimpleModelMatrix((float)mDrawCount / 50.0f);
+	glUniformMatrix4fv(mModelUniformLocation, 1, GL_FALSE, &(modelMatrix.m[0][0]));
 
-    MathHelper::Matrix4 viewMatrix = MathHelper::SimpleViewMatrix();
-    glUniformMatrix4fv(mViewUniformLocation, 1, GL_FALSE, &(viewMatrix.m[0][0]));
+	MathHelper::Matrix4 viewMatrix = MathHelper::SimpleViewMatrix();
+	glUniformMatrix4fv(mViewUniformLocation, 1, GL_FALSE, &(viewMatrix.m[0][0]));
 
-    MathHelper::Matrix4 projectionMatrix = MathHelper::SimpleProjectionMatrix(float(mWindowWidth) / float(mWindowHeight));
-    glUniformMatrix4fv(mProjUniformLocation, 1, GL_FALSE, &(projectionMatrix.m[0][0]));
+	MathHelper::Matrix4 projectionMatrix = MathHelper::SimpleProjectionMatrix(float(mWindowWidth) / float(mWindowHeight));
+	glUniformMatrix4fv(mProjUniformLocation, 1, GL_FALSE, &(projectionMatrix.m[0][0]));
 
-    // Draw 36 indices: six faces, two triangles per face, 3 indices per triangle
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
-    glDrawElements(GL_TRIANGLES, (6 * 2) * 3, GL_UNSIGNED_SHORT, 0);
+	// Draw 36 indices: six faces, two triangles per face, 3 indices per triangle
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
+	glDrawElements(GL_TRIANGLES, (6 * 2) * 3, GL_UNSIGNED_SHORT, 0);
 
-    mDrawCount += 1;
+	mDrawCount += 1;
 }
 
-void SimpleRenderer::UpdateWindowSize(GLsizei width, GLsizei height)
-{
-    glViewport(0, 0, width, height);
-    mWindowWidth = width;
-    mWindowHeight = height;
-
-    glBindTexture(GL_TEXTURE_2D, mTexture);
+void SimpleRenderer::UpdateWindowSize(GLsizei width, GLsizei height) {
+	glViewport(0, 0, width, height);
+	mWindowWidth = width;
+	mWindowHeight = height;
 }
