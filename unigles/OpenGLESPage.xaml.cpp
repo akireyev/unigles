@@ -7,6 +7,7 @@ using namespace Platform;
 using namespace Concurrency;
 using namespace Windows::Foundation;
 using namespace Windows::Media::Capture;
+using namespace Windows::Devices::Enumeration;
 
 OpenGLESPage::OpenGLESPage() :
 	OpenGLESPage(nullptr) {}
@@ -146,20 +147,36 @@ void OpenGLESPage::StopRenderLoop() {
 }
 
 task<void> unigles::OpenGLESPage::InitCamera() {
+	String^ device_id = nullptr;	
+	String^ color_source_info_id = nullptr;
+	Panel current_panel = Panel::Unknown;
 	auto groups = co_await Frames::MediaFrameSourceGroup::FindAllAsync();
-	auto group = std::find_if(begin(groups), end(groups), [&](auto g) {
-		return std::any_of(begin(g->SourceInfos), end(g->SourceInfos), [&](auto si) {
-			return si->SourceKind == Frames::MediaFrameSourceKind::Color;
+	std::for_each(begin(groups), end(groups), [&](auto g) {
+		std::for_each(begin(g->SourceInfos), end(g->SourceInfos), [&](auto si) {
+			if (si->SourceKind != Frames::MediaFrameSourceKind::Color) {
+				return;
+			}
+			if (!si->DeviceInformation || !si->DeviceInformation->EnclosureLocation) {
+				return;
+			}
+			auto panel = si->DeviceInformation->EnclosureLocation->Panel;
+			if (panel == Panel::Front || current_panel == Panel::Unknown) {
+				device_id = si->DeviceInformation->Id;
+				color_source_info_id = si->Id;
+				current_panel = panel;
+			}
 		});
 	});
-	if (group == end(groups)) {
-		Messages->Text = L"not found";
+	if (device_id == nullptr) {
+		Messages->Text = L"No camera found";
 		return;
 	}
 	if (!mMediaCapture.Get()) {
 		try {
 			mMediaCapture = ref new MediaCapture();
-			co_await mMediaCapture->InitializeAsync();
+			MediaCaptureInitializationSettings^ settings = ref new MediaCaptureInitializationSettings();
+			settings->VideoDeviceId = device_id;
+			co_await mMediaCapture->InitializeAsync(settings);
 		} catch (Exception^ ex) {
 			Messages->Text = ex->ToString();
 			return;
@@ -167,11 +184,7 @@ task<void> unigles::OpenGLESPage::InitCamera() {
 	}
 	auto capture = mMediaCapture.Get();
 	previewPanel->Source = capture;
-	Messages->Text = L"found";
-	auto colorSourceInfo = std::find_if(begin((*group)->SourceInfos), end((*group)->SourceInfos), [&](auto si) {
-		return si->SourceKind == Frames::MediaFrameSourceKind::Color;
-	});
-	auto frameSource = capture->FrameSources->Lookup((*colorSourceInfo)->Id);
+	auto frameSource = capture->FrameSources->Lookup(color_source_info_id);
 	std::wostringstream dump;
 	Frames::MediaFrameFormat^ preferred = nullptr;
 	{
